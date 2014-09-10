@@ -1,8 +1,111 @@
 #include "att_det.h"
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
+
+/*
+ * Function: quat_2_dcm
+ * ------------------------
+ *  Converts a 4 element quaternion
+ *  array to a 3x3 DCM array
+ *
+ *  result: DCM
+ */
+
+void q_2_dcm(double* q, double* dcm){
+	double dcm_new[] = { 	q[0]*q[0]-q[1]*q[1]-q[2]*q[2]+q[3]*q[3], 2*(q[0]*q[1]+q[2]*q[3]), 2*(q[0]*q[2]-q[1]*q[3]),
+                 		2*(q[0]*q[1]-q[2]*q[3]), -q[0]*q[0]+q[1]*q[1]-q[2]*q[2]+q[3]*q[3], 2*(q[1]*q[2]+q[0]*q[3]),
+                 		2*(q[0]*q[2]+q[1]*q[3]), 2*(q[1]*q[2]-q[0]*q[3]), -q[0]*q[0]-q[1]*q[1]+q[2]*q[2]+q[3]*q[3] };
+	memcpy(dcm,&dcm_new,9*sizeof(double));
+}
+
+/*
+ * Function: dcm_2_q
+ * ------------------------
+ *  Converts a 3x3 DCM array
+ *  to a 4 element quaternion array
+ *
+ *  result: quaternion
+ */
+
+void dcm_2_q(double* dcm, double* q){
+	int max_q_idx = 0;
+	double max_q_val = 0;
+
+	/*Find Maximum element in q*/
+	int i;
+	for(i=0;i<4;i++){
+		if (q[i]>max_q_val || -q[i]>max_q_val){
+			max_q_val = q[i];
+			max_q_idx = i;
+		}	
+	};
+
+	switch(max_q_idx){
+		case 0 :
+			q[0] = sqrt((1.0/4.0)*(1+2*dcm[0]-(dcm[0]+dcm[4]+dcm[8])));
+			q[1] = ((dcm[1]+dcm[3])/4.0)/q[0];
+			q[2] = ((dcm[2]+dcm[6])/4.0)/q[0];
+			q[3] = ((dcm[5]-dcm[7])/4.0)/q[0];
+		case 1 :
+			q[1] = sqrt((1.0/4.0)*(1+2*dcm[1]-(dcm[0]+dcm[4]+dcm[8])));
+			q[0] = ((dcm[1]+dcm[3])/4.0)/q[1];
+			q[2] = ((dcm[5]+dcm[7])/4.0)/q[1];
+			q[3] = ((dcm[6]-dcm[2])/4.0)/q[1];
+		case 2 :
+			q[2] = sqrt((1.0/4.0)*(1+2*dcm[2]-(dcm[0]+dcm[4]+dcm[8])));
+			q[0] = ((dcm[2]+dcm[6])/4.0)/q[2];
+			q[1] = ((dcm[5]+dcm[7])/4.0)/q[2];
+			q[3] = ((dcm[1]-dcm[3])/4.0)/q[2];
+		case 3 :
+			q[3] = sqrt((1.0/4.0)*(1+(dcm[0]+dcm[4]+dcm[8])));
+			q[0] = ((dcm[5]-dcm[7])/4.0)/q[3];
+			q[1] = ((dcm[6]-dcm[2])/4.0)/q[3];
+			q[2] = ((dcm[1]-dcm[3])/4.0)/q[3];
+	}
+
+}
+
+/*
+ * Function: body_rate_dcm_rot
+ * ------------------------
+ *  Rotates a DCM array by a
+ *  body rate vector array
+ *
+ *  result: DCM
+ */
+
+void body_rate_dcm_rot(double* body_rates, double* prior_dcm, double* rot_dcm){
+	double timestep = 1.0/UPDATE_RATE;
+	gsl_matrix* diff_dcm_mtrx_p = gsl_matrix_alloc(3,3);
+
+	double w_ss[] = { 0            ,-body_rates[2], body_rates[1],
+              		  body_rates[2],0             ,-body_rates[0],
+              	         -body_rates[1], body_rates[0],0             };
+        gsl_matrix_view w_ss_mtrx = gsl_matrix_view_array(w_ss,3,3);
+
+        gsl_matrix_view prior_dcm_mtrx = gsl_matrix_view_array(prior_dcm,3,3);
+        gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, &w_ss_mtrx.matrix, &prior_dcm_mtrx.matrix, 0.0, diff_dcm_mtrx_p);
+	gsl_matrix_scale(diff_dcm_mtrx_p,timestep);
+	gsl_matrix_add(diff_dcm_mtrx_p,&prior_dcm_mtrx.matrix);
+	
+	rot_dcm[0] = gsl_matrix_get(diff_dcm_mtrx_p,0,0);
+	rot_dcm[1] = gsl_matrix_get(diff_dcm_mtrx_p,0,1);
+	rot_dcm[2] = gsl_matrix_get(diff_dcm_mtrx_p,0,2);
+	rot_dcm[3] = gsl_matrix_get(diff_dcm_mtrx_p,1,0);
+	rot_dcm[4] = gsl_matrix_get(diff_dcm_mtrx_p,1,1);
+	rot_dcm[5] = gsl_matrix_get(diff_dcm_mtrx_p,1,1);
+	rot_dcm[6] = gsl_matrix_get(diff_dcm_mtrx_p,2,0);
+	rot_dcm[7] = gsl_matrix_get(diff_dcm_mtrx_p,2,1);
+	rot_dcm[8] = gsl_matrix_get(diff_dcm_mtrx_p,2,2);
+	
+	/*Cleanup*/
+	gsl_matrix_free(diff_dcm_mtrx_p);
+	return;
+}
 
 /*
  * Function: est_sun_vec_ls
@@ -75,8 +178,8 @@ void est_svd_2v(gsl_matrix* body_1_vec_mtrx_p,gsl_matrix* body_2_vec_mtrx_p,gsl_
 	gsl_vector* work_vec_p = gsl_vector_alloc(3);
 	gsl_permutation* est_perm = gsl_permutation_alloc(3);
 
-	/*Start SVD Wahba Solution 
-          Calc B = B + eci'*body*/
+	/* Start SVD Wahba Solution */
+        /* Calc B = B + eci'*body*/
 	gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, body_1_vec_mtrx_p, eci_1_vec_mtrx_p, 1.0, b_mtrx_p);
 	gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, body_2_vec_mtrx_p, eci_2_vec_mtrx_p, 1.0, b_mtrx_p);
 
@@ -96,23 +199,25 @@ void est_svd_2v(gsl_matrix* body_1_vec_mtrx_p,gsl_matrix* body_2_vec_mtrx_p,gsl_
 	gsl_matrix_view m_mtrx = gsl_matrix_view_array(m,3,3);
 
 	/*Calc DCM = U*M*V'*/
-	double dcm[] = {0,0,0,
-                      0,0,0,
-                      0,0,0};
-	gsl_matrix_view dcm_mtrx = gsl_matrix_view_array(dcm,3,3);
+	double dcm_plus[] = {0,0,0,
+                             0,0,0,
+                             0,0,0};
+	gsl_matrix_view dcm_mtrx = gsl_matrix_view_array(dcm_plus,3,3);
 	gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, &m_mtrx.matrix, v_mtrx_p, 0.0, dcm_right_mtrx_p);
 	gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, b_mtrx_p, dcm_right_mtrx_p, 0.0, &dcm_mtrx.matrix);
 
-	printf("DCM = [%.2f, %.2f, %.2f\n     %.2f,%.2f,%.2f\n     %.2f,%.2f,%.2f]\n",
-               dcm[0], dcm[1], dcm[2], dcm[3], dcm[4], dcm[5], dcm[6], dcm[7], dcm[8]);
+	printf("DCM = [%.4f, %.4f, %.4f\n     %.4f,%.4f,%.4f\n     %.4f,%.4f,%.4f]\n",
+               dcm_plus[0], dcm_plus[1], dcm_plus[2], dcm_plus[3], dcm_plus[4], dcm_plus[5], dcm_plus[6], dcm_plus[7], dcm_plus[8]);
 
 	/*Convert DCM to Quaternion*/
+	double q_plus[4];
+	dcm_2_q(dcm_plus,q_plus);
 
-	/*Assign Output - TEMP*/
-	state->att_quaternion[0] = 0.1;
-	state->att_quaternion[1] = 0.2;
-	state->att_quaternion[2] = 0.3;
-	state->att_quaternion[3] = 1.4;
+	/*Assign Output*/
+	state->att_quaternion[0] = q_plus[0];
+	state->att_quaternion[1] = q_plus[1];
+	state->att_quaternion[2] = q_plus[2];
+	state->att_quaternion[3] = q_plus[3];
 
 	/*Cleanup	*/
 	gsl_matrix_free(b_mtrx_p);
@@ -153,22 +258,35 @@ void est_svd(double* gyro_body_rates, double* mag_vec, double* sun_sens_volt, do
 	gsl_matrix_view sun_sens_norm_mtrx = gsl_matrix_view_array(sun_sens_norm,SS_COUNT,3);
 
 	/*Calc Sun Vector*/ 
-	int sv_ret;
-	sv_ret = est_sun_vec_ls(&sun_sens_volt_mtrx.matrix, &sun_sens_norm_mtrx.matrix, sun_vec_mtrx_p);
+	int in_eclipse;
+	in_eclipse = est_sun_vec_ls(&sun_sens_volt_mtrx.matrix, &sun_sens_norm_mtrx.matrix, sun_vec_mtrx_p);
 	printf("Sun Vector:\n");
 	gsl_matrix_fprintf(stdout, sun_vec_mtrx_p,"%.2f");
 
 	/*Check if in Eclipse*/
-	if (sv_ret) { 
-        //Eclipse
-	 	printf("ECLIPSE: %d\n",sv_ret);
-		//Integrate Rate Gyros for 2nd Vector
-		//Calculate Estimate
-		est_svd_2v(&mag_eci_vec_mtrx.matrix,&sun_eci_vec_mtrx.matrix,&mag_vec_mtrx.matrix,sun_vec_mtrx_p,state);
+	if (in_eclipse) { 
+		//Integrate Rate Gyros
+		double prior_dcm[9];
+		double updated_dcm[9];
+		q_2_dcm(state->att_quaternion,prior_dcm);
+		body_rate_dcm_rot(gyro_body_rates, prior_dcm, updated_dcm);
+
+		//Pull reference vector from DCM
+		double x_intg[] = {  updated_dcm[0],
+				     updated_dcm[3],
+				     updated_dcm[6]};
+	        gsl_matrix_view x_intg_vec_mtrx = gsl_matrix_view_array(x_intg,3,1);
+
+		double x_eci[] = {  1,
+				    0,
+				    0};
+	        gsl_matrix_view x_eci_vec_mtrx = gsl_matrix_view_array(x_eci,3,1);
+
+		//Calculate State Estimate - Magnetometer + reference vector from rate gyro integration
+		est_svd_2v(&mag_eci_vec_mtrx.matrix,&x_intg_vec_mtrx.matrix,&mag_vec_mtrx.matrix,&x_eci_vec_mtrx.matrix,state);
+
 	} else {
-	//Sun
-	 	printf("DAY: %d\n",sv_ret);
-		//Calculate Estimate
+		//Calculate State Estimate - Magnetometer and Sun Vector
 		est_svd_2v(&mag_eci_vec_mtrx.matrix,&sun_eci_vec_mtrx.matrix,&mag_vec_mtrx.matrix,sun_vec_mtrx_p,state);
 	}
 

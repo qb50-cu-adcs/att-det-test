@@ -1,5 +1,6 @@
 #define SS_V_CUTOFF	.01
 #define SS_COUNT	15
+#define UPDATE_RATE	2.0
 struct est_state{
 	double att_quaternion[4];
 	double att_err[9];
