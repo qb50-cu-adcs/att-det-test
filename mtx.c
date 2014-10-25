@@ -14,10 +14,10 @@ void mtx_create(int rows, int cols, float *data, struct mtx_matrix* mtx_out){
     int row;
     int col;
    
-    if (rows < MAX_ROWS)  mtx_out->rows = rows;
+    if (rows <= MAX_ROWS)  mtx_out->rows = rows;
     else mtx_out->rows = MAX_ROWS;
 
-    if (cols < MAX_COLS)  mtx_out->cols = cols; 
+    if (cols <= MAX_COLS)  mtx_out->cols = cols; 
     else mtx_out->cols = MAX_COLS;
     
     for (row=1;row <= rows;row++){
@@ -25,7 +25,6 @@ void mtx_create(int rows, int cols, float *data, struct mtx_matrix* mtx_out){
             mtx_out->data[(row-1)*mtx_out->cols + (col-1)] = data[(row-1)*mtx_out->cols + (col-1)];
         }
     }
-
     return;
 }
 
@@ -41,10 +40,10 @@ void mtx_create_ones(int rows, int cols, struct mtx_matrix* mtx_out){
     int row;
     int col;
    
-    if (rows < MAX_ROWS)  mtx_out->rows = rows;
+    if (rows <= MAX_ROWS)  mtx_out->rows = rows;
     else mtx_out->rows = MAX_ROWS;
 
-    if (cols < MAX_COLS)  mtx_out->cols = cols; 
+    if (cols <= MAX_COLS)  mtx_out->cols = cols; 
     else mtx_out->cols = MAX_COLS;
     
     for (row=1;row <= rows;row++){
@@ -52,7 +51,6 @@ void mtx_create_ones(int rows, int cols, struct mtx_matrix* mtx_out){
             mtx_out->data[(row-1)*mtx_out->cols + (col-1)] = 1.0;
         }
     }
-
     return;
 }
 
@@ -97,8 +95,8 @@ void mtx_print(struct mtx_matrix* mtx_a){
     int row;
     int col;
 
-    if (mtx_a->rows < MAX_ROWS && mtx_a->rows > 0 &&
-        mtx_a->cols < MAX_COLS && mtx_a->cols >0) {
+    if (mtx_a->rows <= MAX_ROWS && mtx_a->rows > 0 &&
+        mtx_a->cols <= MAX_COLS && mtx_a->cols >0) {
         printf("\n\r");
         for (row=1;row <= mtx_a->rows;row++){
             printf("|  ");
@@ -139,7 +137,6 @@ int mtx_sum(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_b,
             mtx_set(row,col,mtx_out,data);    
         }
     }
-
     return 0;
 }
 
@@ -167,6 +164,148 @@ int mtx_scale(struct mtx_matrix* mtx_a, float scaler,
             mtx_set(row,col,mtx_out,data);    
         }
     }
-
     return 0;
+}
+
+/*
+ * Function: mtx_mult
+ * ------------------------
+ *  Multiply two matrices
+ *
+ *  Result: Matrix of multiplied inputs
+ */
+
+int mtx_mult(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_b, 
+                struct mtx_matrix* mtx_out){
+    int row_a;
+    int row_b;
+    int col_a;
+    int col_b;
+    float data;
+
+    if ((mtx_a->cols != mtx_b->rows) || 
+        (mtx_out->rows != mtx_a->rows) || (mtx_out->cols != mtx_b->cols)) {
+        return -1;
+    }
+
+    for (row_a=1;row_a <= mtx_a->rows;row_a++){
+        for (col_b=1;col_b <= mtx_b->cols;col_b++){
+            data = 0;
+            for (row_b=1;row_b <= mtx_b->rows;row_b++){
+                data = data + mtx_get(row_a,row_b,mtx_a)*mtx_get(row_b, col_b,mtx_b);
+            }
+            mtx_set(row_a,col_b,mtx_out,data);    
+        }
+    }
+    return 0;
+}
+
+/*
+ * Function: mtx_trans
+ * ------------------------
+ *  Transpose Matrix
+ *
+ *  Result: Matrix of Transposed input
+ */
+
+int mtx_trans(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out){
+    int row;
+    int col;
+    float data;
+
+    if ((mtx_out->rows != mtx_a->rows) || (mtx_out->cols != mtx_a->cols) ||
+        (mtx_a->rows != mtx_a->cols)) {
+        return -1;
+    }
+
+    for (row=1;row <= mtx_a->rows;row++){
+        for (col=1;col <= mtx_a->cols;col++){
+            data = mtx_get(col,row,mtx_a);
+            mtx_set(row,col,mtx_out,data);    
+        }
+    }
+    return 0;
+}
+
+
+/*
+ * Function: mtx_det
+ * ------------------------
+ *  Determinant of Matrix
+ *
+ *  Result: Determinant
+ */
+
+float mtx_det(struct mtx_matrix* mtx_a){
+    float det;
+
+    det = 0;
+    if ((mtx_a->rows != mtx_a->cols)) {
+        return 0;
+    }
+    
+    /*Fixed Determinant Calculation - reduce matrix allocation*/
+    if (mtx_a->rows == 2){
+        det = mtx_get(1,1,mtx_a)*mtx_get(2,2,mtx_a)-mtx_get(1,2,mtx_a)*mtx_get(2,1,mtx_a);
+    } else if (mtx_a->rows == 3) {
+        det = mtx_get(1,1,mtx_a)
+                * (mtx_get(2,2,mtx_a)*mtx_get(3,3,mtx_a)-mtx_get(2,3,mtx_a)*mtx_get(3,2,mtx_a))
+              - mtx_get(1,2,mtx_a)
+                * (mtx_get(2,1,mtx_a)*mtx_get(3,3,mtx_a)-mtx_get(2,3,mtx_a)*mtx_get(3,1,mtx_a))
+              + mtx_get(1,3,mtx_a)
+                * (mtx_get(2,1,mtx_a)*mtx_get(3,2,mtx_a)-mtx_get(2,2,mtx_a)*mtx_get(3,1,mtx_a));
+    } else if (mtx_a->rows == 4) {
+        det = mtx_get(1,1,mtx_a)
+                    * (mtx_get(2,2,mtx_a)
+                        * (mtx_get(3,3,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,3,mtx_a))
+                    - mtx_get(2,3,mtx_a)
+                        * (mtx_get(3,2,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,2,mtx_a))
+                    + mtx_get(2,4,mtx_a)
+                        * (mtx_get(3,2,mtx_a)*mtx_get(4,3,mtx_a)-mtx_get(3,3,mtx_a)*mtx_get(4,2,mtx_a)))
+               - mtx_get(1,2,mtx_a)
+                    * (mtx_get(2,1,mtx_a)
+                        * (mtx_get(3,3,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,3,mtx_a))
+                    - mtx_get(2,3,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,1,mtx_a))
+                    + mtx_get(2,4,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,3,mtx_a)-mtx_get(3,3,mtx_a)*mtx_get(4,1,mtx_a)))
+                + mtx_get(1,3,mtx_a)
+                    * (mtx_get(2,1,mtx_a)
+                        * (mtx_get(3,2,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,2,mtx_a))
+                    - mtx_get(2,2,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,4,mtx_a)-mtx_get(3,4,mtx_a)*mtx_get(4,1,mtx_a))
+                    + mtx_get(2,4,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,2,mtx_a)-mtx_get(3,2,mtx_a)*mtx_get(4,1,mtx_a)))
+                - mtx_get(1,4,mtx_a)
+                    * (mtx_get(2,1,mtx_a)
+                        * (mtx_get(3,2,mtx_a)*mtx_get(4,3,mtx_a)-mtx_get(3,3,mtx_a)*mtx_get(4,2,mtx_a))
+                    - mtx_get(2,2,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,3,mtx_a)-mtx_get(3,3,mtx_a)*mtx_get(4,1,mtx_a))
+                    + mtx_get(2,3,mtx_a)
+                        * (mtx_get(3,1,mtx_a)*mtx_get(4,2,mtx_a)-mtx_get(3,2,mtx_a)*mtx_get(4,1,mtx_a)));
+    }
+    return det;
+}
+
+/*
+ * Function: mtx_norm
+ * ------------------------
+ *  L2,1-norm of matrix
+ *
+ *  Result: Norm of input matrix
+ */
+
+float mtx_norm(struct mtx_matrix* mtx_a){
+    int row;
+    int col;
+    float norm;
+
+    norm = 0;
+    for (row=1;row <= mtx_a->rows;row++){
+        for (col=1;col <= mtx_a->cols;col++){
+            norm = norm + mtx_get(row,col,mtx_a)*mtx_get(row,col,mtx_a);
+        }
+    }
+    norm = (float) sqrt((double) norm);
+    return norm;
 }
