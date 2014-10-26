@@ -72,7 +72,13 @@ int main(void) {
     norm = mtx_norm(&mtx_2_r);
     printf("Matrix 2 Norm: %f\n\r",norm);
 
+    float trace;
+    trace = mtx_trace(&mtx_1_r);
+    printf("Matrix 1 Trace: %f\n\r",trace);
+
     float max;
-    max = mtx_max(&mtx_1_r);
-    printf("Matrix 1 Max: %f\n\r",max);
+    int lr;
+    int lc;
+    max = mtx_max(&mtx_1_r,&lr,&lc);
+    printf("Matrix 1 Max: %f Row: %d Col: %d\n\r",max,lr,lc);
 }
