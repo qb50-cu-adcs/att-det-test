@@ -9,6 +9,7 @@ int main(void) {
     struct mtx_matrix mtx_5_r;
     struct mtx_matrix mtx_6_r;
     struct mtx_matrix mtx_7_r;
+    struct mtx_matrix mtx_8_r;
 
     float data_1[] = {1, 2, 3,
                       -4, 5, 6,
@@ -23,6 +24,7 @@ int main(void) {
     mtx_create_ones(3,1,&mtx_5_r);
     mtx_create_ones(3,3,&mtx_6_r);
     mtx_create_ones(3,3,&mtx_7_r);
+    mtx_create_ones(3,3,&mtx_8_r);
 
     printf("Matrix 1\n\r");
     mtx_print(&mtx_1_r);
@@ -62,6 +64,13 @@ int main(void) {
         mtx_print(&mtx_7_r);
     } else {
         printf("Inverse Failed\n\r\n\r");
+    }
+    
+    if (mtx_ss(&mtx_2_r,&mtx_8_r)==0){
+        printf("Skew Symmetric of Matrix 2\n\r");
+        mtx_print(&mtx_8_r);
+    } else {
+        printf("Skew Symmetric Failed\n\r\n\r");
     }
 
     float det;

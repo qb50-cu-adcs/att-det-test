@@ -215,15 +215,14 @@ int mtx_trans(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out){
     int col;
     float data;
 
-    if ((mtx_out->rows != mtx_a->rows) || (mtx_out->cols != mtx_a->cols) ||
-        (mtx_a->rows != mtx_a->cols)) {
+    if ((mtx_out->rows != mtx_a->cols) || (mtx_out->cols != mtx_a->rows)){
         return -1;
     }
 
     for (row=1;row <= mtx_a->rows;row++){
         for (col=1;col <= mtx_a->cols;col++){
-            data = mtx_get(col,row,mtx_a);
-            mtx_set(row,col,mtx_out,data);    
+            data = mtx_get(row,col,mtx_a);
+            mtx_set(col,row,mtx_out,data);    
         }
     }
     return 0;
@@ -421,7 +420,7 @@ float mtx_max(struct mtx_matrix* mtx_a, int* loc_row, int* loc_col){
     for (row=1;row<=mtx_a->rows;row++){
         for (col=1;col<=mtx_a->cols;col++){
             ele = mtx_get(row,col,mtx_a);
-            if (ele > max){  
+            if (ele >= max){  
                 max = ele;
                 *loc_row = row;
                 *loc_col = col;
@@ -451,4 +450,32 @@ float mtx_trace(struct mtx_matrix* mtx_a){
         }
     }
     return trace;
+}
+
+/*
+ * Function: mtx_ss
+ * ------------------------
+ *  Return skew symmetric matrix
+ *  Input must be 3 vector
+ *
+ *  Result: mtx_matrix
+ */
+
+int mtx_ss(struct mtx_matrix* vec, struct mtx_matrix* mtx_out){
+
+    if(vec->rows != 3 || vec->cols !=1){
+        return -1;
+    }
+
+    mtx_set(1,1,mtx_out,    0);
+    mtx_set(1,2,mtx_out,    -1*mtx_get(3,1,vec));
+    mtx_set(1,3,mtx_out,    mtx_get(2,1,vec));
+    mtx_set(2,1,mtx_out,    mtx_get(3,1,vec));
+    mtx_set(2,2,mtx_out,    0);
+    mtx_set(2,3,mtx_out,    -1*mtx_get(1,1,vec));
+    mtx_set(3,1,mtx_out,    -1*mtx_get(2,1,vec));
+    mtx_set(3,2,mtx_out,    mtx_get(1,1,vec));
+    mtx_set(3,3,mtx_out,    0);
+
+    return 0;
 }

@@ -1,78 +1,66 @@
 #include <stdio.h>
 #include "mtx.h"
+#include "att_det.h"
 
 int main(void) {
-    struct mtx_matrix mtx_1_r; 
-    struct mtx_matrix mtx_2_r; 
-    struct mtx_matrix mtx_3_r;
-    struct mtx_matrix mtx_4_r;
-    struct mtx_matrix mtx_5_r;
-    struct mtx_matrix mtx_6_r;
-    struct mtx_matrix mtx_7_r;
+    struct mtx_matrix rates_vec;
+    struct mtx_matrix prior_dcm;
+    struct mtx_matrix dcm_out;
+    struct mtx_matrix sun_sens_norm;
+    struct mtx_matrix sun_sens_volt;
+    struct mtx_matrix sun_vec;
 
-    float data_1[] = {1, 2, 3,
-                      -4, 5, 6,
-                      7, 8, -9};
+    float rates[] = { .0006,
+                      .0010,
+                     -.0004};
 
-    float data_2[] = {10, 20, 30};
+    float prior[] = { -.0367, -.9987, -.0367,
+                      -.3616, -.0210,  .9321,
+                      -.9316,  .0475, -.3604};
 
-    mtx_create(3,3,data_1,&mtx_1_r);
-    mtx_create(3,1,data_2,&mtx_2_r);
-    mtx_create_ones(3,3,&mtx_3_r);
-    mtx_create_ones(3,3,&mtx_4_r);
-    mtx_create_ones(3,1,&mtx_5_r);
-    mtx_create_ones(3,3,&mtx_6_r);
-    mtx_create_ones(3,3,&mtx_7_r);
+    float norm_sun_sens_cart[] = {  0.9418,   0.2879,  -0.1736,
+                                    0.9397,        0,   0.3420,
+                                    0.9418,  -0.2879,   0.1736,
+                                   -0.9366,  -0.3043,  -0.1736,
+                                   -0.9397,        0,   0.3420,
+                                   -0.9366,   0.3043,  -0.1736,
+                                         0,   0.8660,  -0.5000,
+                                         0,   0.8660,   0.5000,
+                                   -0.5000,   0.8660,        0,
+                                         0,  -0.8660,  -0.5000,
+                                         0,  -0.8660,   0.5000,
+                                   -0.5000,  -0.8660,        0,
+                                         0,        0,   1.0000};
 
-    printf("Matrix 1\n\r");
-    mtx_print(&mtx_1_r);
-    printf("Matrix 2\n\r");
-    mtx_print(&mtx_2_r);
+    float sun_sens_read[] = {   0.0333,
+                                     0,
+                                     0,
+                                2.1565,
+                                2.0621,
+                                0.5380,
+                                0.3883,
+                                0.1457,
+                                0.4012,
+                                1.5100,
+                                2.7357,
+                                2.8886,
+                                1.4108};
 
-    if (mtx_sum(&mtx_1_r,&mtx_2_r,&mtx_3_r)==0){
-        printf("Matrix 1 + Matrix 2\n\r\n\r");
-        mtx_print(&mtx_3_r);
-    } else {
-        printf("Sum Failed\n\r\n\r"); 
-    }
+    mtx_create(3,1,rates,&rates_vec);
+    mtx_create(3,3,prior,&prior_dcm);
+    mtx_create_ones(3,3,&dcm_out);
+    mtx_create_ones(3,1,&sun_vec);
+    mtx_create(13,3,norm_sun_sens_cart,&sun_sens_norm);
+    mtx_create(13,1,sun_sens_read,&sun_sens_volt);
 
-    if (mtx_scale(&mtx_1_r,5.0,&mtx_4_r)==0){
-        printf("Matrix 1 * 5.0\n\r");
-        mtx_print(&mtx_4_r);
-    } else {
-        printf("Scale Failed\n\r\n\r");
-    }
+    body_rate_dcm_rot(&rates_vec, &prior_dcm, &dcm_out);
+    est_sun_vec_ls(&sun_sens_volt, &sun_sens_norm, &sun_vec);
 
-    if (mtx_mult(&mtx_1_r,&mtx_2_r,&mtx_5_r)==0){
-        printf("Matrix 1 * Matrix 2\n\r");
-        mtx_print(&mtx_5_r);
-    } else {
-        printf("Multiply Failed\n\r\n\r");
-    }
+    printf("Inputs:\n\r");
+    mtx_print(&rates_vec);
+    mtx_print(&prior_dcm);
+    printf("Outputs:\n\r");
+    mtx_print(&dcm_out);
+    mtx_print(&sun_vec);
 
-    if (mtx_trans(&mtx_1_r,&mtx_6_r)==0){
-        printf("Transpose Matrix 1\n\r");
-        mtx_print(&mtx_6_r);
-    } else {
-        printf("Transpose Failed\n\r\n\r");
-    }
-    
-    if (mtx_inv(&mtx_1_r,&mtx_7_r)==0){
-        printf("Inverse Matrix 1\n\r");
-        mtx_print(&mtx_7_r);
-    } else {
-        printf("Inverse Failed\n\r\n\r");
-    }
-
-    float det;
-    det = mtx_det(&mtx_1_r);
-    printf("Matrix 1 Determinant: %f\n\r",det);
-
-    float norm;
-    norm = mtx_norm(&mtx_2_r);
-    printf("Matrix 2 Norm: %f\n\r",norm);
-
-    float max;
-    max = mtx_max(&mtx_1_r);
-    printf("Matrix 1 Max: %f\n\r",max);
 }
