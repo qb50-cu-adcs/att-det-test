@@ -1,5 +1,5 @@
-#define MAX_ROWS 8
-#define MAX_COLS 4
+#define MAX_ROWS 13
+#define MAX_COLS 13
 
 struct mtx_matrix{
     int rows;
@@ -21,3 +21,4 @@ float mtx_norm(struct mtx_matrix* mtx_a);
 int mtx_inv(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out);
 float mtx_max(struct mtx_matrix* mtx_a, int* loc_row, int* loc_col);
 float mtx_trace(struct mtx_matrix* mtx_a);
+int mtx_ss(struct mtx_matrix* vec, struct mtx_matrix* mtx_out);
