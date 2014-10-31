@@ -56,6 +56,63 @@ void mtx_create_ones(int rows, int cols, struct mtx_matrix* mtx_out){
 }
 
 /*
+ * Function: mtx_create_eye
+ * ------------------------
+ *  Construct Identity matrix
+ *
+ *  Result: mtx_matrix mtx_out
+ */
+
+void mtx_create_eye(int rows, int cols, struct mtx_matrix* mtx_out){
+    int row;
+    int col;
+   
+    if (rows <= MAX_ROWS)  mtx_out->rows = rows;
+    else mtx_out->rows = MAX_ROWS;
+
+    if (cols <= MAX_COLS)  mtx_out->cols = cols; 
+    else mtx_out->cols = MAX_COLS;
+
+    if (rows != cols) rows = cols;
+    
+    for (row=1;row <= rows;row++){
+        for (col=1;col <= cols;col++){
+            if (row == col)
+            mtx_out->data[(row-1)*mtx_out->cols + (col-1)] = 1.0;
+            else 
+            mtx_out->data[(row-1)*mtx_out->cols + (col-1)] = 0.0;
+        }
+    }
+    return;
+}
+
+/*
+ * Function: mtx_create_val
+ * ------------------------
+ *  Construct mtx_matrix of value
+ *
+ *  Result: mtx_matrix mtx_out
+ */
+
+void mtx_create_val(int rows, int cols, 
+                        struct mtx_matrix* mtx_out, float val){
+    int row;
+    int col;
+   
+    if (rows <= MAX_ROWS)  mtx_out->rows = rows;
+    else mtx_out->rows = MAX_ROWS;
+
+    if (cols <= MAX_COLS)  mtx_out->cols = cols; 
+    else mtx_out->cols = MAX_COLS;
+    
+    for (row=1;row <= rows;row++){
+        for (col=1;col <= cols;col++){
+            mtx_out->data[(row-1)*mtx_out->cols + (col-1)] = val; 
+        }
+    }
+    return;
+}
+/*
  * Function: mtx_get
  * ------------------------
  * Get value from mtx_matrix
@@ -477,5 +534,29 @@ int mtx_ss(struct mtx_matrix* vec, struct mtx_matrix* mtx_out){
     mtx_set(3,2,mtx_out,    mtx_get(1,1,vec));
     mtx_set(3,3,mtx_out,    0);
 
+    return 0;
+}
+
+/*
+ * Function: mtx_copy
+ * ------------------------
+ *  Copy first matrix to second
+ *
+ *  Result: mtx_matrix mtx_out
+ */
+
+int mtx_copy(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out){
+    int row;
+    int col;
+
+    if ( (mtx_out->rows != mtx_a->rows) || (mtx_out->cols != mtx_a->cols)) {
+        return -1;
+    }
+
+    for (row=1;row <= mtx_a->rows;row++){
+        for (col=1;col <= mtx_a->cols;col++){
+            mtx_set(row,col,mtx_out,    mtx_get(row,col,mtx_a));    
+        }
+    }
     return 0;
 }
