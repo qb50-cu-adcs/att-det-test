@@ -9,6 +9,8 @@ struct mtx_matrix{
 
 void mtx_create(int rows, int cols, float *data, struct mtx_matrix* mtx_out);
 void mtx_create_ones(int rows, int cols, struct mtx_matrix* mtx_out);
+void mtx_create_eye(int rows, int cols, struct mtx_matrix* mtx_out);
+void mtx_create_val(int rows, int cols, struct mtx_matrix* mtx_out, float val);
 float mtx_get(int row, int col, struct mtx_matrix* mtx_a);
 void mtx_set(int row, int col, struct mtx_matrix* mtx_out, float data);
 void mtx_print(struct mtx_matrix* mtx_a);
@@ -22,3 +24,4 @@ int mtx_inv(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out);
 float mtx_max(struct mtx_matrix* mtx_a, int* loc_row, int* loc_col);
 float mtx_trace(struct mtx_matrix* mtx_a);
 int mtx_ss(struct mtx_matrix* vec, struct mtx_matrix* mtx_out);
+int mtx_copy(struct mtx_matrix* mtx_a, struct mtx_matrix* mtx_out);
